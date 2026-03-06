@@ -4,6 +4,10 @@
 
 MCP server that lets AI agents search the [substreams.dev](https://substreams.dev) package registry.
 
+<a href="https://glama.ai/mcp/servers/@PaulieB14/substreams-search-mcp-server">
+  <img width="380" height="200" src="https://glama.ai/mcp/servers/@PaulieB14/substreams-search-mcp-server/badge" alt="Substreams Search Server MCP server" />
+</a>
+
 ## Tool: `search_substreams`
 
 | Parameter | Type | Default | Description |
