@@ -2,6 +2,10 @@
 
 [![npm version](https://img.shields.io/npm/v/substreams-search-mcp)](https://www.npmjs.com/package/substreams-search-mcp)
 
+<a href="https://glama.ai/mcp/servers/@PaulieB14/substreams-search-mcp-server">
+  <img width="380" height="200" src="https://glama.ai/mcp/servers/@PaulieB14/substreams-search-mcp-server/badge" />
+</a>
+
 MCP server that lets AI agents search the [substreams.dev](https://substreams.dev) package registry.
 
 ## Tool: `search_substreams`
