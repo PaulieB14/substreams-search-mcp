@@ -1,0 +1,44 @@
+{
+  "name": "substreams-search-mcp",
+  "version": "1.0.0",
+  "description": "MCP server to search the substreams.dev package registry",
+  "type": "module",
+  "bin": {
+    "substreams-search-mcp": "build/index.js"
+  },
+  "main": "./build/index.js",
+  "scripts": {
+    "build": "tsc && chmod 755 build/index.js",
+    "start": "node build/index.js",
+    "prepublishOnly": "npm run build"
+  },
+  "files": [
+    "build"
+  ],
+  "keywords": [
+    "mcp",
+    "substreams",
+    "blockchain",
+    "ai",
+    "claude",
+    "the-graph"
+  ],
+  "author": "PaulieB14",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/PaulieB14/substreams-search-mcp.git"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.1",
+    "node-html-parser": "^7.0.1",
+    "zod": "^3.24.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.7.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

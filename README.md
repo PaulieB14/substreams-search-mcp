@@ -1,5 +1,7 @@
 # Substreams Search MCP Server
 
+[![npm version](https://img.shields.io/npm/v/substreams-search-mcp)](https://www.npmjs.com/package/substreams-search-mcp)
+
 MCP server that lets AI agents search the [substreams.dev](https://substreams.dev) package registry.
 
 ## Tool: `search_substreams`
@@ -12,15 +14,9 @@ MCP server that lets AI agents search the [substreams.dev](https://substreams.de
 
 Returns JSON with package name, URL, creator, network, version, published date, and download count.
 
-## Setup
+## Quick Start (npx)
 
-```bash
-git clone https://github.com/PaulieB14/substreams-search-mcp.git
-cd substreams-search-mcp
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-```
+No installation needed:
 
 ### Claude Desktop
 
@@ -30,8 +26,8 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
 {
   "mcpServers": {
     "substreams-search": {
-      "command": "/path/to/substreams-search-mcp/.venv/bin/python3",
-      "args": ["/path/to/substreams-search-mcp/server.py"]
+      "command": "npx",
+      "args": ["substreams-search-mcp"]
     }
   }
 }
@@ -45,8 +41,8 @@ Add to `~/.cursor/mcp.json`:
 {
   "mcpServers": {
     "substreams-search": {
-      "command": "/path/to/substreams-search-mcp/.venv/bin/python3",
-      "args": ["/path/to/substreams-search-mcp/server.py"]
+      "command": "npx",
+      "args": ["substreams-search-mcp"]
     }
   }
 }
@@ -60,8 +56,8 @@ Add to `~/.claude/mcp.json`:
 {
   "mcpServers": {
     "substreams-search": {
-      "command": "/path/to/substreams-search-mcp/.venv/bin/python3",
-      "args": ["/path/to/substreams-search-mcp/server.py"]
+      "command": "npx",
+      "args": ["substreams-search-mcp"]
     }
   }
 }
