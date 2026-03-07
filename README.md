@@ -67,6 +67,19 @@ Add to `~/.claude/mcp.json`:
 }
 ```
 
+## Next Step: Sink Data to PostgreSQL
+
+Found a package with `search_substreams`? Stream it into PostgreSQL with [create-substreams-sink-sql](https://www.npmjs.com/package/create-substreams-sink-sql):
+
+```bash
+npm init substreams-sink-sql my-sink
+cd my-sink
+# Edit substreams.yaml with your .spkg URL, then:
+make up && make setup && make dev
+```
+
+Scaffolds a complete project with Docker Postgres, pgweb UI, Makefile automation, and a step-by-step tutorial. No custom code needed.
+
 ## How it works
 
 The substreams.dev registry has no public API. This server scrapes the package listing pages, paginates through all results, deduplicates, and returns structured JSON. Multi-word queries search for the first word server-side and filter the rest client-side.
