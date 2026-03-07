@@ -1,6 +1,6 @@
 {
   "name": "substreams-search-mcp",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "MCP server to search the substreams.dev package registry",
   "type": "module",
   "bin": {
