@@ -6,9 +6,13 @@
   <img width="380" height="200" src="https://glama.ai/mcp/servers/@PaulieB14/substreams-search-mcp-server/badge" />
 </a>
 
-MCP server that lets AI agents search the [substreams.dev](https://substreams.dev) package registry.
+MCP server that lets AI agents search, inspect, and analyze [Substreams](https://substreams.dev) packages — from registry discovery to sink deployment.
 
-## Tool: `search_substreams`
+## Tools
+
+### `search_substreams`
+
+Search the substreams.dev package registry.
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
@@ -16,7 +20,58 @@ MCP server that lets AI agents search the [substreams.dev](https://substreams.de
 | `sort` | string | `"most_downloaded"` | `most_downloaded`, `alphabetical`, `most_used`, `last_uploaded` |
 | `network` | string | — | Filter by chain: `ethereum`, `solana`, `arbitrum-one`, etc. |
 
-Returns JSON with package name, URL, creator, network, version, published date, and download count.
+Returns package name, URL, creator, network, version, published date, and download count.
+
+### `inspect_package`
+
+Inspect a Substreams package (.spkg) to see its full module graph, protobuf types, and metadata.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `url` | string (required) | Direct URL to a `.spkg` file |
+
+Returns:
+- Package metadata (name, version, documentation, network)
+- All modules with their kind (map/store/blockIndex), output types, and update policies
+- Full DAG: each module's `dependsOn` and `dependedBy` relationships
+- Input chain for each module (source blocks, other maps, stores with get/deltas mode, params)
+- List of all protobuf output types and proto files
+- Mermaid diagram of the module graph
+
+### `list_package_modules`
+
+Lightweight alternative to `inspect_package` — just the module names, types, and inputs/outputs.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `url` | string (required) | Direct URL to a `.spkg` file |
+
+### `get_sink_config`
+
+Analyze a package's sink configuration and generate ready-to-run CLI commands.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `url` | string (required) | Direct URL to a `.spkg` file |
+
+Returns one of three results:
+
+- **`sink_configured`** — Package has an embedded sink config. Extracts the SQL schema (for SQL sinks), identifies the sink module and type, and generates `install`, `setup`, and `run` commands with the correct network endpoint.
+- **`no_sink_config_but_compatible_modules_found`** — No embedded config, but modules output sink-compatible types (e.g. `DatabaseChanges`). Identifies them and suggests how to wire up sinking.
+- **`no_sink_support`** — No sink-compatible modules. Lists all module output types so you know what custom consumer you'd need.
+
+## Workflow
+
+```
+search_substreams("uniswap", network: "polygon")
+  → find package, get spkg.io URL
+
+inspect_package("https://spkg.io/creator/package-v1.0.0.spkg")
+  → see module DAG, output types, what it produces
+
+get_sink_config("https://spkg.io/creator/package-v1.0.0.spkg")
+  → get SQL schema + CLI commands to deploy
+```
 
 ## Quick Start (npx)
 
@@ -67,19 +122,8 @@ Add to `~/.claude/mcp.json`:
 }
 ```
 
-## Next Step: Sink Data to PostgreSQL
-
-Found a package with `search_substreams`? Stream it into PostgreSQL with [create-substreams-sink-sql](https://www.npmjs.com/package/create-substreams-sink-sql):
-
-```bash
-npm init substreams-sink-sql my-sink
-cd my-sink
-# Edit substreams.yaml with your .spkg URL, then:
-make up && make setup && make dev
-```
-
-Scaffolds a complete project with Docker Postgres, pgweb UI, Makefile automation, and a step-by-step tutorial. No custom code needed.
-
 ## How it works
 
-The substreams.dev registry has no public API. This server scrapes the package listing pages, paginates through all results, deduplicates, and returns structured JSON. Multi-word queries search for the first word server-side and filter the rest client-side.
+- **Search**: The substreams.dev registry has no public API. This server scrapes the package listing pages, paginates through all results, deduplicates, and returns structured JSON. Multi-word queries search for the first word server-side and filter the rest client-side.
+- **Inspect**: Uses [`@substreams/core`](https://github.com/substreams-js/substreams-js) to fetch and parse `.spkg` files (protobuf-encoded Substreams packages), extracting module definitions, DAG relationships, and proto type information.
+- **Sink config**: Reads the embedded `sinkConfig` (a `google.protobuf.Any` field) from the package, decodes it based on the type URL, and maps networks to Substreams endpoints for correct CLI commands.
