@@ -228,6 +228,15 @@ async function fetchSpkg(url: string) {
   const timeout = setTimeout(() => controller.abort(), 30_000);
   try {
     return await fetchSubstream(url, { signal: controller.signal });
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error);
+    if (msg.includes("wire type") || msg.includes("invalid tag")) {
+      throw new Error(
+        `The URL did not return a valid .spkg file (got HTML or other non-protobuf content). ` +
+        `Make sure the URL points directly to a .spkg binary, e.g. https://spkg.io/{creator}/{package}-{version}.spkg`
+      );
+    }
+    throw error;
   } finally {
     clearTimeout(timeout);
   }
