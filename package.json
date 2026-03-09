@@ -1,6 +1,6 @@
 {
   "name": "substreams-search-mcp",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "MCP server to search and inspect Substreams packages — browse the registry and introspect .spkg module graphs, protobuf types, and DAG dependencies",
   "type": "module",
   "bin": {
