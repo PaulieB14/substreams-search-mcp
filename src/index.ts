@@ -362,6 +362,179 @@ server.registerTool(
 );
 
 // ---------------------------------------------------------------------------
+// Sink type mappings
+// ---------------------------------------------------------------------------
+const SINK_TYPE_MAP: Record<string, { label: string; sinkBinary: string; dsnExample: string }> = {
+  "sf.substreams.sink.sql.v1.Service": {
+    label: "SQL (PostgreSQL/ClickHouse)",
+    sinkBinary: "substreams-sink-sql",
+    dsnExample: "psql://user:password@localhost:5432/dbname?sslmode=disable",
+  },
+  "sf.substreams.sink.entity.v1.Service": {
+    label: "Subgraph Entities",
+    sinkBinary: "substreams-sink-entity-changes",
+    dsnExample: "",
+  },
+  "sf.substreams.sink.kv.v1.Service": {
+    label: "Key-Value Store",
+    sinkBinary: "substreams-sink-kv",
+    dsnExample: "badger3:///tmp/kv-store",
+  },
+};
+
+const OUTPUT_TYPE_TO_SINK: Record<string, string> = {
+  "proto:sf.substreams.sink.database.v1.DatabaseChanges": "sql",
+  "proto:sf.substreams.database.v1.DatabaseChanges": "sql",
+  "proto:sf.substreams.sink.entity.v1.EntityChanges": "subgraph",
+  "proto:sf.substreams.entity.v1.EntityChanges": "subgraph",
+  "proto:sf.substreams.sink.kv.v1.KVOperations": "kv",
+};
+
+// Network to endpoint mapping
+const NETWORK_ENDPOINTS: Record<string, string> = {
+  mainnet: "mainnet.eth.streamingfast.io:443",
+  ethereum: "mainnet.eth.streamingfast.io:443",
+  polygon: "polygon.substreams.pinax.network:443",
+  "arbitrum-one": "arbone.substreams.pinax.network:443",
+  arbitrum: "arbone.substreams.pinax.network:443",
+  base: "base.substreams.pinax.network:443",
+  bsc: "bsc.substreams.pinax.network:443",
+  optimism: "optimism.substreams.pinax.network:443",
+  solana: "solana.substreams.pinax.network:443",
+};
+
+// ---------------------------------------------------------------------------
+// Tool: get_sink_config
+// ---------------------------------------------------------------------------
+server.registerTool(
+  "get_sink_config",
+  {
+    description:
+      "Analyze a Substreams package's sink configuration. If the package has an embedded sink config (SQL schema, etc.), " +
+      "it extracts and displays it with ready-to-run CLI commands. If no sink is configured but sink-compatible modules exist, " +
+      "it identifies them and suggests how to set up sinking. Returns setup commands, schema, and endpoint info.",
+    inputSchema: {
+      url: z.string().describe("Direct URL to a .spkg file"),
+    },
+    annotations: { readOnlyHint: true },
+  },
+  async ({ url }) => {
+    try {
+      const pkg = await fetchSpkg(url);
+      const modules = pkg.modules?.modules ?? [];
+      const meta = pkg.packageMeta[0];
+      const packageName = meta?.name ?? "unknown";
+      const packageVersion = meta?.version ?? "unknown";
+      const network = pkg.network || "unknown";
+      const endpoint = NETWORK_ENDPOINTS[network] ?? `${network}.substreams.pinax.network:443`;
+
+      // Case 1: Package has an embedded sink config
+      if (pkg.sinkModule && pkg.sinkConfig) {
+        const sinkTypeUrl = pkg.sinkConfig.typeUrl;
+        const sinkInfo = SINK_TYPE_MAP[sinkTypeUrl];
+
+        let embeddedSchema: string | undefined;
+        if (sinkTypeUrl.includes("sql")) {
+          // SQL sink configs embed the schema as UTF-8
+          const raw = new TextDecoder().decode(pkg.sinkConfig.value);
+          // Strip leading non-printable bytes (protobuf framing)
+          const schemaStart = raw.indexOf("--");
+          const createStart = raw.indexOf("CREATE");
+          const start = schemaStart >= 0 ? schemaStart : createStart >= 0 ? createStart : -1;
+          if (start >= 0) {
+            embeddedSchema = raw.substring(start);
+          }
+        }
+
+        const sinkModule = modules.find((m) => m.name === pkg.sinkModule);
+        const sinkOutputType = sinkModule ? getModuleOutputType(sinkModule) : undefined;
+
+        const commands = {
+          install: sinkInfo
+            ? `brew install streamingfast/tap/${sinkInfo.sinkBinary}`
+            : `# Install the sink binary for ${sinkTypeUrl}`,
+          setup: sinkInfo
+            ? `${sinkInfo.sinkBinary} setup "${sinkInfo.dsnExample}" ${url}`
+            : `# Setup sink for ${sinkTypeUrl}`,
+          run: sinkInfo
+            ? `${sinkInfo.sinkBinary} run "${sinkInfo.dsnExample}" ${url} -e ${endpoint}`
+            : `# Run sink for ${sinkTypeUrl}`,
+        };
+
+        return textResult({
+          status: "sink_configured",
+          package: { name: packageName, version: packageVersion },
+          network,
+          endpoint,
+          sink: {
+            module: pkg.sinkModule,
+            outputType: sinkOutputType,
+            type: sinkTypeUrl,
+            label: sinkInfo?.label ?? sinkTypeUrl,
+          },
+          ...(embeddedSchema && { embeddedSchema }),
+          commands,
+        });
+      }
+
+      // Case 2: No sink config, but find sink-compatible modules
+      const sinkCompatible = modules
+        .filter((mod) => {
+          const out = getModuleOutputType(mod);
+          return out && OUTPUT_TYPE_TO_SINK[out];
+        })
+        .map((mod) => {
+          const outputType = getModuleOutputType(mod)!;
+          const sinkType = OUTPUT_TYPE_TO_SINK[outputType];
+          return { module: mod.name, outputType, sinkType };
+        });
+
+      if (sinkCompatible.length > 0) {
+        const primary = sinkCompatible[0];
+        const sinkTypeUrl = primary.sinkType === "sql"
+          ? "sf.substreams.sink.sql.v1.Service"
+          : primary.sinkType === "subgraph"
+          ? "sf.substreams.sink.entity.v1.Service"
+          : "sf.substreams.sink.kv.v1.Service";
+        const sinkInfo = SINK_TYPE_MAP[sinkTypeUrl];
+
+        return textResult({
+          status: "no_sink_config_but_compatible_modules_found",
+          package: { name: packageName, version: packageVersion },
+          network,
+          endpoint,
+          compatibleModules: sinkCompatible,
+          suggestion: `This package has ${sinkCompatible.length} module(s) that output sink-compatible types but no embedded sink config. ` +
+            `You can still sink "${primary.module}" to ${sinkInfo?.label ?? primary.sinkType} by providing your own SQL schema.`,
+          commands: sinkInfo
+            ? {
+                install: `brew install streamingfast/tap/${sinkInfo.sinkBinary}`,
+                run: `${sinkInfo.sinkBinary} run "${sinkInfo.dsnExample}" ${url} -e ${endpoint} --output-module ${primary.module}`,
+              }
+            : undefined,
+        });
+      }
+
+      // Case 3: No sink-compatible modules at all
+      return textResult({
+        status: "no_sink_support",
+        package: { name: packageName, version: packageVersion },
+        network,
+        message:
+          "This package has no sink-compatible modules. Its modules output custom protobuf types " +
+          "that would need a custom consumer (not a standard SQL/subgraph/KV sink).",
+        modules: modules.map((m) => ({
+          name: m.name,
+          outputType: getModuleOutputType(m),
+        })),
+      });
+    } catch (error) {
+      return errorResult(error);
+    }
+  }
+);
+
+// ---------------------------------------------------------------------------
 // Start server
 // ---------------------------------------------------------------------------
 async function main() {
