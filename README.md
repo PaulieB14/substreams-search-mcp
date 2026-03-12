@@ -6,7 +6,7 @@
   <img width="380" height="200" src="https://glama.ai/mcp/servers/@PaulieB14/substreams-search-mcp-server/badge" />
 </a>
 
-MCP server that lets AI agents search, inspect, and analyze [Substreams](https://substreams.dev) packages — from registry discovery to sink deployment.
+MCP server that lets AI agents search, inspect, and analyze [Substreams](https://substreams.dev) packages — from registry discovery to sink deployment. Supports **dual transport** — stdio for local clients and SSE/HTTP for remote agents (OpenClaw, custom frameworks).
 
 ## Tools
 
@@ -77,24 +77,9 @@ get_sink_config("https://spkg.io/creator/package-v1.0.0.spkg")
 
 No installation needed:
 
-### Claude Desktop
+### Claude Desktop / Cursor / Claude Code (stdio)
 
-Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
-
-```json
-{
-  "mcpServers": {
-    "substreams-search": {
-      "command": "npx",
-      "args": ["substreams-search-mcp"]
-    }
-  }
-}
-```
-
-### Cursor
-
-Add to `~/.cursor/mcp.json`:
+Add to your MCP config (`claude_desktop_config.json`, `~/.cursor/mcp.json`, or `~/.claude/mcp.json`):
 
 ```json
 {
@@ -107,20 +92,42 @@ Add to `~/.cursor/mcp.json`:
 }
 ```
 
-### Claude Code
+### OpenClaw / Remote Agents (SSE)
 
-Add to `~/.claude/mcp.json`:
+Start the server with the HTTP transport:
+
+```bash
+# Dual transport — stdio + SSE on port 3849
+npx substreams-search-mcp --http
+
+# SSE only (for remote/server deployments)
+npx substreams-search-mcp --http-only
+
+# Custom port
+MCP_HTTP_PORT=4000 npx substreams-search-mcp --http
+```
+
+Then point your agent at the SSE endpoint:
 
 ```json
 {
   "mcpServers": {
     "substreams-search": {
-      "command": "npx",
-      "args": ["substreams-search-mcp"]
+      "url": "http://localhost:3849/sse"
     }
   }
 }
 ```
+
+### Transport Modes
+
+| Invocation | Transports | Use case |
+|---|---|---|
+| `npx substreams-search-mcp` | stdio | Claude Desktop, Cursor, Claude Code |
+| `npx substreams-search-mcp --http` | stdio + SSE :3849 | Dual — local + remote agents |
+| `npx substreams-search-mcp --http-only` | SSE :3849 | OpenClaw, remote deployments |
+
+A `/health` endpoint is available at `http://localhost:3849/health` when HTTP transport is active.
 
 ## How it works
 
