@@ -1,3 +1,10 @@
+---
+name: substreams-search-mcp
+description: Search, inspect, and analyze Substreams packages from the substreams.dev registry — module graphs, protobuf types, and sink deployment commands.
+metadata:
+  {"openclaw": {"requires": {"bins": ["node"]}, "homepage": "https://github.com/PaulieB14/substreams-search-mcp"}}
+---
+
 # Substreams Search
 
 Search, inspect, and analyze Substreams packages from the substreams.dev registry — from discovery to sink deployment.
